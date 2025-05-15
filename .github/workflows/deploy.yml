@@ -15,7 +15,7 @@ jobs:
       - name: Run Maven Build (reusable)
         uses: ./.github/actions/maven-build
 
-      - name: Deploy to server (example)
+      - name: Deploy to server
         run: |
           echo "Deploying application..."
           # scp/rsync/kubectl 
