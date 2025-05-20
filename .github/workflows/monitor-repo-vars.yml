@@ -1,0 +1,59 @@
+name: Monitor GitHub Variables
+
+on:
+  schedule:
+    - cron: "0 * * * *"  # every hour
+  workflow_dispatch:
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Fetch current repo variables
+        id: fetch_vars
+        run: |
+          curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/repos/${{ github.repository }}/actions/variables \
+            | jq . > current-vars.json
+
+      - name: Load previous vars if they exist
+        run: |
+          if [ -f previous-vars.json ]; then
+            echo "Found previous vars."
+          else
+            echo "{}" > previous-vars.json
+          fi
+
+      - name: Compare with previous vars
+        id: compare
+        run: |
+          DIFF=$(diff -q previous-vars.json current-vars.json || true)
+          if [ -n "$DIFF" ]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+            echo "$DIFF" > changes.txt
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send email if changes detected
+        if: steps.compare.outputs.changes == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USERNAME }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: GitHub Repo Variable Changed - ${{ github.repository }}
+          body: |
+            GitHub Action detected a change in repository variables or settings for ${{ github.repository }}.
+            Changes:
+            ${{ steps.compare.outputs.changes }}
+          to: ${{ secrets.GMAIL_USERNAME }}
+          from: GitHub Monitor <${{ secrets.GMAIL_USERNAME }}>
+
+      - name: Save current vars as new previous
+        run: |
+          cp current-vars.json previous-vars.json
