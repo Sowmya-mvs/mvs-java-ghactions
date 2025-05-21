@@ -38,6 +38,19 @@ jobs:
             echo "changes=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Get latest audit log for variable changes
+        if: steps.compare.outputs.changes == 'true'
+        id: audit
+        run: |
+          ORG=$(echo "${{ github.repository }}" | cut -d'/' -f1)
+          curl -s -H "Authorization: Bearer ${{ secrets.AUDIT_LOG_TOKEN }}" \
+               "https://api.github.com/orgs/$ORG/audit-log?phrase=actions_variable&per_page=5" \
+            | jq -r '[.[] | {actor: .actor, action: .action, time: .created_at}] | sort_by(.time) | reverse | .[0]' > actor.json
+          
+          echo "ACTOR=$(jq -r .actor actor.json)" >> $GITHUB_ENV
+          echo "ACTION=$(jq -r .action actor.json)" >> $GITHUB_ENV
+          echo "TIME=$(jq -r .time actor.json)" >> $GITHUB_ENV
+
       - name: Send email if changes detected
         if: steps.compare.outputs.changes == 'true'
         uses: dawidd6/action-send-mail@v3
@@ -48,9 +61,16 @@ jobs:
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
           subject: GitHub Repo Variable Changed - ${{ github.repository }}
           body: |
-            GitHub Action detected a change in repository variables or settings for ${{ github.repository }}.
-            Changes:
-            ${{ steps.compare.outputs.changes }}
+            GitHub Action detected a change in repository variables or settings.
+
+            Repository: ${{ github.repository }}
+            Actor: ${{ env.ACTOR }}
+            Action: ${{ env.ACTION }}
+            Time: ${{ env.TIME }}
+
+            Detected diff:
+            $(cat changes.txt)
+
           to: ${{ secrets.GMAIL_USERNAME }}
           from: GitHub Monitor <${{ secrets.GMAIL_USERNAME }}>
 
