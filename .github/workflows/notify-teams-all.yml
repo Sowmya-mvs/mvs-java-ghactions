@@ -1,0 +1,37 @@
+name: Notify Teams on GitHub Activity
+
+on:
+  push:
+  pull_request:
+  issues:
+  issue_comment:
+  release:
+  workflow_run:
+  workflow_dispatch:
+  create:
+  delete:
+  fork:
+  
+
+jobs:
+  notify-teams:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send Event Notification to Microsoft Teams
+        env:
+          TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          EVENT_NAME: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          MESSAGE="📣 **Event**: ${EVENT_NAME}\n🔧 **Repo**: ${REPO}\n👤 **User**: ${ACTOR}"
+
+          curl -H 'Content-Type: application/json' -d '{
+            "@type": "MessageCard",
+            "@context": "http://schema.org/extensions",
+            "summary": "GitHub Activity Notification",
+            "themeColor": "0076D7",
+            "title": "GitHub Event: '"${EVENT_NAME}"'",
+            "text": "'"$MESSAGE"'"
+          }' $TEAMS_WEBHOOK_URL
