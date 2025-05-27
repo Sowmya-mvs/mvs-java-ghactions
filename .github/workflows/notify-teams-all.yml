@@ -1,4 +1,5 @@
-name: Notify Teams on GitHub Activitiess
+name: Notify Teams on GitHub Activity
+
 
 on:
   push:
