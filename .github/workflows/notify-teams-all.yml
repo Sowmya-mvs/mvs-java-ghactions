@@ -7,11 +7,10 @@ on:
   issues:
   issue_comment:
   release:
-  workflow_run:
-  workflow_dispatch:
   create:
   delete:
   fork:
+  workflow_dispatch:
   
 
 jobs:
