@@ -1,5 +1,6 @@
 name: Notify Teams on GitHub Activity
 
+
 on:
   push:
   pull_request:
